@@ -18,10 +18,6 @@ public class LogisticaArquivoParser {
 
     public record RequisicaoBuscaCep(int cepOrigem, int cepDestino) {}
 
-    /**
-     * Processa o arquivo completo da Parte 2, mapeia os territórios por CEP,
-     * monta o grafo de custos e calcula a rota mais barata entre os CEPs finais.
-     */
     public RotaResultado processarECalcularRota(String caminhoArquivo) throws IOException {
         List<Cidade> cidades = new ArrayList<>();
         Map<String, List<Aresta>> grafo = new HashMap<>();
@@ -82,21 +78,37 @@ public class LogisticaArquivoParser {
             throw new IllegalArgumentException("Arquivo mal formatado: CEPs de busca não encontrados.");
         }
 
-        String cidadeOrigem = descobrirCidadePorCep(cidades, buscaCeps.cepOrigem());
-        String cidadeDestino = descobrirCidadePorCep(cidades, buscaCeps.cepDestino());
+        // 1. Descobre TODAS as cidades possíveis para a origem e para o destino (Tratando sobreposição)
+        List<String> cidadesOrigemPossiveis = descobrirCidadesPorCep(cidades, buscaCeps.cepOrigem());
+        List<String> cidadesDestinoPossiveis = descobrirCidadesPorCep(cidades, buscaCeps.cepDestino());
 
-        if (cidadeOrigem == null || cidadeDestino == null) {
+        if (cidadesOrigemPossiveis.isEmpty() || cidadesDestinoPossiveis.isEmpty()) {
             return null;
         }
 
-        return calculadorRotaService.calcularMenorCusto(grafo, cidadeOrigem, cidadeDestino);
+        // 2. Testa todas as combinações e escolhe a que tiver o menor custo total real
+        RotaResultado melhorResultadoGeral = null;
+
+        for (String origem : cidadesOrigemPossiveis) {
+            for (String destino : cidadesDestinoPossiveis) {
+                RotaResultado resultadoAtual = calculadorRotaService.calcularMenorCusto(grafo, origem, destino);
+
+                if (resultadoAtual != null) {
+                    if (melhorResultadoGeral == null || resultadoAtual.custoTotal() < melhorResultadoGeral.custoTotal()) {
+                        melhorResultadoGeral = resultadoAtual;
+                    }
+                }
+            }
+        }
+
+        return melhorResultadoGeral;
     }
 
-    private String descobrirCidadePorCep(List<Cidade> cidades, int cep) {
+    // Altera o método auxiliar para retornar uma lista de cidades compatíveis com o CEP
+    private List<String> descobrirCidadesPorCep(List<Cidade> cidades, int cep) {
         return cidades.stream()
                 .filter(c -> c.contemCep(cep))
                 .map(Cidade::nome)
-                .findFirst()
-                .orElse(null);
+                .toList();
     }
 }
