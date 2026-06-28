@@ -104,7 +104,7 @@ public class LogisticaArquivoParser {
         return melhorResultadoGeral;
     }
 
-    // Altera o método auxiliar para retornar uma lista de cidades compatíveis com o CEP
+    // Altera a função auxiliar para retornar uma lista de cidades compatíveis com o CEP
     private List<String> descobrirCidadesPorCep(List<Cidade> cidades, int cep) {
         return cidades.stream()
                 .filter(c -> c.contemCep(cep))
